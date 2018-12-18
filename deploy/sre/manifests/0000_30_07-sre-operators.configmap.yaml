@@ -1,0 +1,191 @@
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: sre-operators
+  namespace: openshift-operator-lifecycle-manager
+
+data:
+  customResourceDefinitions: |-
+    - apiVersion: apiextensions.k8s.io/v1beta1
+      kind: CustomResourceDefinition
+      metadata:
+        name: clusterreaders.clusterreader.sre.openshift.com
+      spec:
+        group: clusterreader.sre.openshift.com
+        names:
+          kind: ClusterReader
+          listKind: ClusterReaderList
+          plural: clusterreaders
+          singular: clusterreader
+        scope: Cluster
+        version: v1alpha1
+
+  clusterServiceVersions: |-
+    - apiVersion: operators.coreos.com/v1alpha1
+      kind: ClusterServiceVersion
+      metadata:
+        annotations:
+          foo: bar
+        name: sre-operator.v0.0.1
+        namespace: placeholder
+      spec:
+        customresourcedefinitions:
+          owned:
+            - description: Manages SRE configuration
+              displayName: SRE configuration
+              kind: ClusterReader
+              name: sre.openshift.com
+              resources:
+                - kind: Service
+                  name: ''
+                  version: v1
+                - kind: Pod
+                  name: ''
+                  version: v1
+              specDescriptors:
+                - description: List of cluster readers
+                  displayName: Cluster readers 
+                  path: clusterReaders
+              version: v1
+        keywords:
+          - configuration
+          - config management
+          - rbac
+          - cluster
+          - open source
+        displayName: SRE Operator
+        provider:
+          name: SRE
+        maturity: alpha
+        version: 0.0.1
+        links:
+          - name: SRE
+            url: 'https://github.com/OpenshiftOperations'
+          - name: Soure
+            url: 'https://github.com/jharrington22/cluster-readers-operator'
+        install:
+          spec:
+            deployments:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: cluster-readers
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    name: cluster-readers
+                template:
+                  metadata:
+                    labels:
+                      name: cluster-readers
+                  spec:
+                    serviceAccountName: cluster-readers
+                    containers:
+                      - name: cluster-readers
+                        # Replace this with the built image name
+                        image: quay.io/jharrington22/cluster-readers-operator:v0.0.1
+                        ports:
+                        - containerPort: 60000
+                          name: metrics
+                        command:
+                        - cluster-readers
+                        imagePullPolicy: Always
+                        env:
+                          - name: WATCH_NAMESPACE
+                            valueFrom:
+                              fieldRef:
+                                fieldPath: metadata.namespace
+                          - name: POD_NAME
+                            valueFrom:
+                              fieldRef:
+                                fieldPath: metadata.name
+                          - name: OPERATOR_NAME
+                            value: "cluster-readers"
+
+                      serviceAccountName: cluster-readers
+            permissions:
+              - rules:
+                  - apiGroups:
+                    - ""
+                    resources:
+                    - pods
+                    - services
+                    - endpoints
+                    - persistentvolumeclaims
+                    - events
+                    - configmaps
+                    - secrets
+                    verbs:
+                    - '*'
+                  - apiGroups:
+                    - apps
+                    resources:
+                    - deployments
+                    - daemonsets
+                    - replicasets
+                    - statefulsets
+                    verbs:
+                    - '*'
+                  - apiGroups:
+                    - monitoring.coreos.com
+                    resources:
+                    - servicemonitors
+                    verbs:
+                    - get
+                    - create
+                  - apiGroups:
+                    - clusterreader.sre.openshift.com
+                    resources:
+                    - '*'
+                    verbs:
+                    - '*'
+                  - apiGroups:
+                    - contianerset.openshift.io
+                    resources:
+                    - '*'
+                    verbs:
+                    - '*'
+                serviceAccountName: cluster-readers
+          strategy: deployment
+        maintainers:
+          - email: aos-sre-platform@redhat.com
+            name: SRE Platform team
+        description: >
+          The SRE Configuration Operator configures cluster readers for the cluster.
+          The Couchbase Autonomous Operator allows users to easily deploy, manage, and
+          maintain Couchbase deployments on OpenShift. By installing this integration
+          you will be able to deply Couchbase Server clusters with a single command.
+      
+      
+          ## Roadmap
+      
+      
+          * **Automate All the Things** - Do amazing thing with operators
+      
+      
+          * **Config loop** - Replace config loop
+          
+          ## Required Parameters
+      
+          * `clusterReaders` - a list of cluster reader usernames
+          ([documentation](https://github.com/jharrington22/cluster-readers-operator))
+      
+      
+        selector:
+          matchLabels:
+            alm-owner-etcd: sreoperator
+            operated-by: sreoperator
+        labels:
+          alm-owner-etcd: sreoperator
+          operated-by: sreoperator
+      
+  packages: |-
+
+    - #! package-manifest: ./deploy/chart/catalog_resources/certified-operators/couchbase.1.0.0.clusterserviceversion
+      packageName: sre-config
+      channels:
+      - name: alpha
+        currentCSV: sre-operator.v0.0.1
+

@@ -1,0 +1,11 @@
+---
+# Source: olm/templates/image-references
+
+kind: ImageStream
+apiVersion: image.openshift.io/v1
+spec:
+  tags:
+  - name: sre-config
+    from:
+      kind: DockerImage
+      name:  quay.io/jharrington22/cluster-readers-operator:v0.0.1
